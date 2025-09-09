@@ -1,11 +1,11 @@
 ﻿using System.Data;
 using System.Diagnostics;
 using System.Security.Cryptography;
-using System.Text.Json;
 using EpinelPS.Database;
 using EpinelPS.Utils;
 using ICSharpCode.SharpZipLib.Zip;
 using MemoryPack;
+using Newtonsoft.Json;
 
 namespace EpinelPS.Data
 {
@@ -154,6 +154,10 @@ namespace EpinelPS.Data
         [LoadRecord("AttractiveLevelRewardTable.json", "id")]
         public readonly Dictionary<int, AttractiveLevelRewardRecord> AttractiveLevelReward = [];
 
+        [LoadRecord("AttractiveLevelTable.json", "id")]
+        public readonly Dictionary<int, AttractiveLevelRecord> AttractiveLevelTable = [];
+
+
         [LoadRecord("SubQuestTable.json", "id")]
         public readonly Dictionary<int, SubquestRecord> Subquests = [];
 
@@ -199,6 +203,33 @@ namespace EpinelPS.Data
         public readonly Dictionary<int, RecycleResearchStatRecord> RecycleResearchStats = [];
         [LoadRecord("RecycleResearchLevelTable.json", "id")]
         public readonly Dictionary<int, RecycleResearchLevelRecord> RecycleResearchLevels = [];
+
+        // Harmony Cube  Data Tables
+        [LoadRecord("ItemHarmonyCubeTable.json", "id")]
+        public readonly Dictionary<int, ItemHarmonyCubeRecord> ItemHarmonyCubeTable = [];
+
+        [LoadRecord("ItemHarmonyCubeLevelTable.json", "id")]
+        public readonly Dictionary<int, ItemHarmonyCubeLevelRecord> ItemHarmonyCubeLevelTable = [];
+
+        // Favorite Item  Data Tables
+        [LoadRecord("FavoriteItemTable.json", "id")]
+        public readonly Dictionary<int, FavoriteItemRecord> FavoriteItemTable = [];
+
+        [LoadRecord("FavoriteItemExpTable.json", "id")]
+        public readonly Dictionary<int, FavoriteItemExpRecord> FavoriteItemExpTable = [];
+
+        [LoadRecord("FavoriteItemLevelTable.json", "id")]
+        public readonly Dictionary<int, FavoriteItemLevelRecord> FavoriteItemLevelTable = [];
+
+        [LoadRecord("FavoriteItemProbabilityTable.json", "id")]
+        public readonly Dictionary<int, FavoriteItemProbabilityRecord> FavoriteItemProbabilityTable = [];
+
+        [LoadRecord("FavoriteItemQuestTable.json", "id")]
+        public readonly Dictionary<int, FavoriteItemQuestRecord> FavoriteItemQuestTable = [];
+
+        [LoadRecord("FavoriteItemQuestStageTable.json", "id")]
+        public readonly Dictionary<int, FavoriteItemQuestStageRecord> FavoriteItemQuestStageTable = [];
+
 
 
         static async Task<GameData> BuildAsync()
@@ -392,7 +423,9 @@ namespace EpinelPS.Data
                 }
                 else
                 {
-                    DataTable<X> obj = await JsonSerializer.DeserializeAsync<DataTable<X>>(MainZip.GetInputStream(fileEntry), JsonDb.IndentedJson) ?? throw new Exception("deserializeobject failed");
+                    using var streamReader = new System.IO.StreamReader(MainZip.GetInputStream(fileEntry));
+                    var json = await streamReader.ReadToEndAsync();
+                    DataTable<X> obj = JsonConvert.DeserializeObject<DataTable<X>>(json) ?? throw new Exception("deserializeobject failed");
                     deserializedObject = [.. obj.records];
                 }
 
@@ -560,7 +593,20 @@ namespace EpinelPS.Data
 
         public string? GetItemSubType(int itemType)
         {
-            return ItemEquipTable[itemType].item_sub_type;
+            // Check if it's an equipment item
+            if (ItemEquipTable.TryGetValue(itemType, out ItemEquipRecord? equipRecord))
+            {
+                return equipRecord.item_sub_type;
+            }
+
+            // Check if it's a harmony cube item
+            if (ItemHarmonyCubeTable.TryGetValue(itemType, out ItemHarmonyCubeRecord? harmonyCubeRecord))
+            {
+                return harmonyCubeRecord.item_sub_type;
+            }
+
+            // Return null if item type not found
+            return null;
         }
 
         internal IEnumerable<int> GetStageIdsForChapter(int chapterNumber, bool normal)
@@ -668,6 +714,18 @@ namespace EpinelPS.Data
             if (results.Any())
                 return results.FirstOrDefault().Value.reward_id;
             else return 0;
+        }
+
+        public FavoriteItemQuestRecord? GetFavoriteItemQuestTableData(int questId)
+        {
+            FavoriteItemQuestTable.TryGetValue(questId, out FavoriteItemQuestRecord?data);
+            return data;
+        }
+
+        public FavoriteItemQuestStageRecord? GetFavoriteItemQuestStageData(int stageId)
+        {
+            FavoriteItemQuestStageTable.TryGetValue(stageId, out FavoriteItemQuestStageRecord? data);
+            return data;
         }
     }
 }
